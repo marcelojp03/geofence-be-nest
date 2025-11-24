@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// School (Tenant = Colegio)
+// ========================================
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  address   String?  @db.Text
+  phone     String?  @db.VarChar(50)
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Geometría del área del colegio (PostGIS geofence)
+  geom      Unsupported("geometry")? @map("geom")
+
+  // Relaciones
+  users          User[]
+  children       Child[]
+  devices        Device[]
+  childPositions ChildPosition[]
+  alerts         Alert[]
+
+  @@map("schools")
+}
+
+// ========================================
+// User (Roles: SCHOOL_ADMIN, PARENT)
+// ========================================
+model User {
+  id           Int      @id @default(autoincrement())
+  schoolId     Int      @map("school_id")
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  fullName     String   @map("full_name") @db.VarChar(255)
+  phone        String?  @db.VarChar(50)
+  role         UserRole
+  status       Status   @default(ACTIVE)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  children Child[]
+
+  @@index([schoolId])
+  @@map("users")
+}
+
+// ========================================
+// Child (Hijo asociado a un padre)
+// ========================================
+model Child {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int      @map("school_id")
+  parentId  Int      @map("parent_id")
+  fullName  String   @map("full_name") @db.VarChar(255)
+  age       Int?
+  grade     String?  @db.VarChar(50)
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  school    School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  parent    User            @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  devices   Device[]
+  positions ChildPosition[]
+  alerts    Alert[]
+
+  @@index([schoolId])
+  @@index([parentId])
+  @@map("children")
+}
+
+// ========================================
+// Device (Dispositivo del hijo)
+// ========================================
+model Device {
+  id        Int       @id @default(autoincrement())
+  schoolId  Int       @map("school_id")
+  childId   Int?      @map("child_id")
+
+  // Identificador único del dispositivo (Android ID, IDFV, UUID)
+  deviceUid String    @unique @map("device_uid") @db.VarChar(255)
+
+  // Nombre opcional: "Celular Pedrito"
+  name      String?   @db.VarChar(255)
+
+  // Info de hardware/sistema
+  model        String?   @db.VarChar(255)   // "Galaxy A52"
+  manufacturer String?   @db.VarChar(255)   // "Samsung"
+  osVersion    String?   @map("os_version") @db.VarChar(50) // "Android 14"
+  platform     String?   @db.VarChar(50)    // "android" | "ios"
+
+  // Estado reciente
+  lastBatteryLevel Int?      @map("last_battery")
+  fcmToken         String?   @map("fcm_token") @db.Text
+  status           Status    @default(ACTIVE)
+  lastSeen         DateTime? @map("last_seen")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  child  Child? @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId])
+  @@index([childId])
+  @@map("devices")
+}
+
+// ========================================
+// ChildPosition (Posición del hijo)
+// ========================================
+model ChildPosition {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int      @map("school_id")
+  childId   Int      @map("child_id")
+  lat       Float    @db.DoublePrecision
+  lng       Float    @db.DoublePrecision
+  accuracy  Float?   @db.DoublePrecision
+  speed     Float?   @db.DoublePrecision
+  heading   Float?   @db.DoublePrecision
+  altitude  Float?   @db.DoublePrecision
+
+  // Nivel de batería en el momento de la lectura
+  batteryLevel Int?   @map("battery_level")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Geometría POINT en PostGIS para ST_Within
+  geom      Unsupported("geometry")? @map("geom")
+
+  // Relaciones
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  child  Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  alerts Alert[]
+
+  @@index([schoolId])
+  @@index([childId])
+  @@index([createdAt])
+  @@map("child_positions")
+}
+
+// ========================================
+// Alert (Alertas de entrada/salida)
+// ========================================
+model Alert {
+  id         Int        @id @default(autoincrement())
+  schoolId   Int        @map("school_id")
+  childId    Int        @map("child_id")
+  positionId Int        @map("position_id")
+  type       AlertType
+  message    String     @db.Text
+  isRead     Boolean    @default(false) @map("is_read")
+  readAt     DateTime?  @map("read_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  // Relaciones
+  school   School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  child    Child         @relation(fields: [childId], references: [id], onDelete: Cascade)
+  position ChildPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([childId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("alerts")
+}
+
+// ========================================
+// Enums
+// ========================================
+enum UserRole {
+  SCHOOL_ADMIN
+  PARENT
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum AlertType {
+  EXIT_AREA
+  ENTER_AREA
+}
