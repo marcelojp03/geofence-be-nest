@@ -1,0 +1,2131 @@
+{
+	"info": {
+		"_postman_id": "geofence-backend-2025",
+		"name": "Geofence Backend - Complete API",
+		"description": "Colección completa de 53 endpoints para el sistema de geofencing con NestJS + Prisma + PostGIS",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "geofence-be-nest"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@escuela1.com\",\n  \"password\": \"Admin123!\",\n  \"role\": \"SCHOOL_ADMIN\",\n  \"schoolId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Registra un nuevo usuario (SCHOOL_ADMIN o PARENT)"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('access_token', jsonData.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@escuela1.com\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Inicia sesión y obtiene JWT token (se guarda automáticamente en variable de entorno)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Obtiene el perfil del usuario autenticado"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de autenticación y gestión de usuarios"
+		},
+		{
+			"name": "Schools",
+			"item": [
+				{
+					"name": "Create School",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Colegio San Agustín\",\n  \"address\": \"Av. Cristo Redentor #456\",\n  \"phone\": \"3-3456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/schools",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools"
+							]
+						},
+						"description": "Crea una nueva escuela (SCHOOL_ADMIN)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Schools",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/schools",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools"
+							]
+						},
+						"description": "Lista todas las escuelas (multi-tenant por schoolId del usuario)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get School by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/schools/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene una escuela por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update School",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"3-3456790\",\n  \"status\": \"ACTIVE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/schools/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Actualiza una escuela (SCHOOL_ADMIN)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete School",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/schools/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Elimina una escuela (SCHOOL_ADMIN)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de escuelas"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"padre@correo.com\",\n  \"password\": \"Padre123!\",\n  \"role\": \"PARENT\",\n  \"schoolId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Crea un nuevo usuario (SCHOOL_ADMIN)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Lista todos los usuarios (multi-tenant)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene un usuario por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ACTIVE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "2"
+								}
+							]
+						},
+						"description": "Actualiza un usuario (SCHOOL_ADMIN)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "2"
+								}
+							]
+						},
+						"description": "Elimina un usuario (SCHOOL_ADMIN)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de usuarios (administradores y padres)"
+		},
+		{
+			"name": "Children",
+			"item": [
+				{
+					"name": "Create Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"schoolId\": 1,\n  \"parentId\": 2,\n  \"fullName\": \"Juan Pérez García\",\n  \"age\": 8,\n  \"grade\": \"3ro Primaria\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/children",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children"
+							]
+						},
+						"description": "Registra un nuevo hijo (SCHOOL_ADMIN o PARENT)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Children",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/children",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children"
+							]
+						},
+						"description": "Lista todos los hijos (multi-tenant, PARENT solo ve sus hijos)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Child by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/children/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene un hijo por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"grade\": \"4to Primaria\",\n  \"age\": 9\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/children/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Actualiza un hijo"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/children/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Elimina un hijo"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de hijos registrados en el sistema"
+		},
+		{
+			"name": "Devices",
+			"item": [
+				{
+					"name": "Create Device",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceUid\": \"abc123xyz789\",\n  \"name\": \"Samsung Galaxy A54\",\n  \"model\": \"SM-A546B\",\n  \"manufacturer\": \"Samsung\",\n  \"osVersion\": \"Android 14\",\n  \"platform\": \"android\",\n  \"fcmToken\": \"fcm_token_example_12345\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/devices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices"
+							]
+						},
+						"description": "Registra un nuevo dispositivo móvil"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Devices",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/devices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices"
+							]
+						},
+						"description": "Lista todos los dispositivos (multi-tenant)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Device by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/devices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene un dispositivo por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Device",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fcmToken\": \"nuevo_fcm_token_67890\",\n  \"status\": \"ACTIVE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/devices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Actualiza un dispositivo"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Device",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/devices/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Elimina un dispositivo"
+					},
+					"response": []
+				},
+				{
+					"name": "Link Device to Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceUid\": \"abc123xyz789\",\n  \"childId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/devices/link",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"link"
+							]
+						},
+						"description": "Vincula un dispositivo a un hijo específico"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de dispositivos móviles"
+		},
+		{
+			"name": "Tracking (Public)",
+			"item": [
+				{
+					"name": "Save Position (No Auth)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceUid\": \"abc123xyz789\",\n  \"lat\": -17.783327,\n  \"lng\": -63.182140,\n  \"accuracy\": 5.2,\n  \"speed\": 0.0,\n  \"heading\": 0.0,\n  \"altitude\": 420.5,\n  \"batteryLevel\": 85\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions"
+							]
+						},
+						"description": "Endpoint PÚBLICO para guardar posiciones GPS desde la app del hijo (sin JWT)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Latest Position by Device",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/device/:deviceId/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"device",
+								":deviceId",
+								"latest"
+							],
+							"variable": [
+								{
+									"key": "deviceId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene la última posición de un dispositivo específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Positions by Device",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/device/:deviceId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"device",
+								":deviceId"
+							],
+							"variable": [
+								{
+									"key": "deviceId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene historial de posiciones de un dispositivo"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Latest Position by Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/child/:childId/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"child",
+								":childId",
+								"latest"
+							],
+							"variable": [
+								{
+									"key": "childId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene la última posición de un hijo específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Positions by Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/child/:childId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"child",
+								":childId"
+							],
+							"variable": [
+								{
+									"key": "childId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene historial de posiciones de un hijo"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de tracking GPS (1 público, resto con JWT)"
+		},
+		{
+			"name": "Alerts",
+			"item": [
+				{
+					"name": "Get All Alerts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts"
+							]
+						},
+						"description": "Lista todas las alertas (multi-tenant, PARENT solo ve alertas de sus hijos)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alert by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene una alerta por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Alert as Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/:id/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								":id",
+								"read"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Marca una alerta como leída"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Alerts Count",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/unread/count",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								"unread",
+								"count"
+							]
+						},
+						"description": "Obtiene el número de alertas no leídas"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alerts by Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/child/:childId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								"child",
+								":childId"
+							],
+							"variable": [
+								{
+									"key": "childId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Obtiene todas las alertas de un hijo específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Alert",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Elimina una alerta (SCHOOL_ADMIN)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de alertas de entrada/salida de área"
+		},
+		{
+			"name": "Parent Endpoints",
+			"item": [
+				{
+					"name": "Get My Children",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/children",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children"
+							]
+						},
+						"description": "Padre obtiene lista de sus hijos (filtrado automático por parentId)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Child Latest Location",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/child/:childId/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"child",
+								":childId",
+								"latest"
+							],
+							"variable": [
+								{
+									"key": "childId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Padre obtiene ubicación actual de su hijo"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Child Location History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/child/:childId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"child",
+								":childId"
+							],
+							"variable": [
+								{
+									"key": "childId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Padre obtiene historial de ubicaciones de su hijo"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Alerts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts"
+							]
+						},
+						"description": "Padre obtiene alertas de sus hijos (filtrado automático)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alerts by Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/child/:childId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								"child",
+								":childId"
+							],
+							"variable": [
+								{
+									"key": "childId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Padre obtiene alertas de un hijo específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Alert as Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/:id/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								":id",
+								"read"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Padre marca una alerta como leída"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts/unread/count",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts",
+								"unread",
+								"count"
+							]
+						},
+						"description": "Padre obtiene contador de alertas no leídas"
+					},
+					"response": []
+				},
+				{
+					"name": "Get School Info",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/schools/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Padre obtiene información de la escuela"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Child Device Info",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/children/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Padre obtiene información del hijo incluyendo dispositivo vinculado"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Padre obtiene su perfil de usuario"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints específicos para la app móvil de padres (10 endpoints read-only + JWT)"
+		},
+		{
+			"name": "Complete Flow Test",
+			"item": [
+				{
+					"name": "1. Create School",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('school_id', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Colegio Test Flow\",\n  \"address\": \"Av. Test #123\",\n  \"phone\": \"3-3333333\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/schools",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"schools"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Register Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin.test@flow.com\",\n  \"password\": \"Admin123!\",\n  \"role\": \"SCHOOL_ADMIN\",\n  \"schoolId\": {{school_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3. Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('access_token', jsonData.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin.test@flow.com\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4. Create Parent",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('parent_id', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"padre.test@flow.com\",\n  \"password\": \"Padre123!\",\n  \"role\": \"PARENT\",\n  \"schoolId\": {{school_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5. Create Child",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('child_id', jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"schoolId\": {{school_id}},\n  \"parentId\": {{parent_id}},\n  \"fullName\": \"Niño Test Flow\",\n  \"age\": 8,\n  \"grade\": \"3ro Primaria\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/children",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"children"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6. Create Device",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('device_id', jsonData.id);",
+									"    pm.environment.set('device_uid', jsonData.deviceUid);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceUid\": \"test_flow_device_{{$randomInt}}\",\n  \"name\": \"Samsung Test\",\n  \"model\": \"SM-A546B\",\n  \"manufacturer\": \"Samsung\",\n  \"osVersion\": \"Android 14\",\n  \"platform\": \"android\",\n  \"fcmToken\": \"fcm_test_token_123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/devices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7. Link Device to Child",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceUid\": \"{{device_uid}}\",\n  \"childId\": {{child_id}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/devices/link",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"link"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "8. Send GPS Position (NO AUTH)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"deviceUid\": \"{{device_uid}}\",\n  \"lat\": -17.783327,\n  \"lng\": -63.182140,\n  \"accuracy\": 5.2,\n  \"speed\": 0.0,\n  \"heading\": 0.0,\n  \"altitude\": 420.5,\n  \"batteryLevel\": 85\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "9. Get Latest Position",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tracking/positions/child/{{child_id}}/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"tracking",
+								"positions",
+								"child",
+								"{{child_id}}",
+								"latest"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "10. Get All Alerts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/alerts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"alerts"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Flujo completo de prueba: Crear escuela → Registrar admin → Login → Crear padre → Crear hijo → Registrar dispositivo → Vincular → Enviar GPS → Verificar ubicación y alertas"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "school_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "parent_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "child_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "device_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "device_uid",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
