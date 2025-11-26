@@ -83,7 +83,6 @@ export class UsersService {
           select: {
             id: true,
             name: true,
-            code: true,
           },
         },
       },
@@ -106,7 +105,6 @@ export class UsersService {
           select: {
             id: true,
             name: true,
-            code: true,
           },
         },
         children: {

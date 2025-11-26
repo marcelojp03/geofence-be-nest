@@ -57,7 +57,8 @@ export class ChildrenService {
         devices: {
           select: {
             id: true,
-            deviceName: true,
+            deviceUid: true,
+            name: true,
             platform: true,
             status: true,
             lastSeen: true,
@@ -89,7 +90,6 @@ export class ChildrenService {
           select: {
             id: true,
             name: true,
-            code: true,
           },
         },
         devices: true,
@@ -151,7 +151,8 @@ export class ChildrenService {
         devices: {
           select: {
             id: true,
-            deviceName: true,
+            deviceUid: true,
+            name: true,
             status: true,
             lastSeen: true,
           },

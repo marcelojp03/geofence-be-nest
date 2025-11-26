@@ -55,7 +55,6 @@ export class AuthService {
         schoolId: user.schoolId,
         school: {
           id: user.school.id,
-          code: user.school.code,
           name: user.school.name,
         },
       },

@@ -66,7 +66,7 @@ Generate Prisma Client:
 npx prisma generate
 ```
 
-**Note:** PostGIS geometry columns (`schools.geom`, `child_positions.geom`) must be created manually. See migration files in `prisma/migrations/` for SQL scripts.
+**Note:** PostGIS geometry columns (`schools.geom`, `child_positions.geom`) must be created manually. See `database/add_postgis_manual.sql` for the SQL script.
 
 ---
 
@@ -131,10 +131,10 @@ src/
 
 | Document | Description |
 |----------|-------------|
-| [ESTADO_ACTUAL.md](ESTADO_ACTUAL.md) | Complete backend status, models, endpoints, architecture |
-| [ENDPOINTS_COMPLETOS.md](ENDPOINTS_COMPLETOS.md) | Full API reference with request/response examples |
-| [ARQUITECTURA_CLIENTES.md](ARQUITECTURA_CLIENTES.md) | Client architecture (Flutter apps, React panel, QGIS) |
-| [SMOKE_TESTS.md](SMOKE_TESTS.md) | PowerShell scripts for API testing |
+| [docs/ESTADO_ACTUAL.md](docs/ESTADO_ACTUAL.md) | Complete backend status, models, endpoints, architecture |
+| [docs/ENDPOINTS_COMPLETOS.md](docs/ENDPOINTS_COMPLETOS.md) | Full API reference with request/response examples |
+| [docs/ARQUITECTURA_CLIENTES.md](docs/ARQUITECTURA_CLIENTES.md) | Client architecture (Flutter apps, React panel, QGIS) |
+| [docs/SMOKE_TESTS.md](docs/SMOKE_TESTS.md) | PowerShell scripts for API testing |
 
 ---
 

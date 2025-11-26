@@ -1,0 +1,77 @@
+@startuml db_schema
+
+class School {
+  +id: Int
+  +name: String
+  +address: String
+  +phone: String
+  +status: Status
+  +geom: geometry
+}
+
+class User {
+  +id: Int
+  +email: String
+  +passwordHash: String
+  +fullName: String
+  +phone: String
+  +role: UserRole
+  +status: Status
+}
+
+class Child {
+  +id: Int
+  +fullName: String
+  +age: Int
+  +grade: String
+  +status: Status
+}
+
+class Device {
+  +id: Int
+  +deviceUid: String
+  +name: String
+  +model: String
+  +manufacturer: String
+  +osVersion: String
+  +platform: String
+  +lastBatteryLevel: Int
+  +status: Status
+}
+
+class ChildPosition {
+  +id: Int
+  +lat: Float
+  +lng: Float
+  +accuracy: Float
+  +speed: Float
+  +heading: Float
+  +altitude: Float
+  +batteryLevel: Int
+  +createdAt: DateTime
+  +geom: geometry
+}
+
+class Alert {
+  +id: Int
+  +type: AlertType
+  +message: String
+  +isRead: Boolean
+  +createdAt: DateTime
+}
+
+' Multiplicidades
+School "1" o-- "0..*" User
+School "1" o-- "0..*" Child
+School "1" o-- "0..*" Device
+School "1" o-- "0..*" ChildPosition
+School "1" o-- "0..*" Alert
+
+User "1" o-- "0..*" Child : parent
+Child "1" o-- "0..*" Device
+Child "1" o-- "0..*" ChildPosition
+Child "1" o-- "0..*" Alert
+
+ChildPosition "1" o-- "0..*" Alert : sourcePosition
+
+@enduml

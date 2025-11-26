@@ -1,0 +1,47 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (si no quieres incluirla en la imagen)
+*.md
+!README.md
+
+# Scripts
+scripts/
