@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Query,
   UseGuards,
+  Optional,
 } from '@nestjs/common';
 import { ChildrenService } from './children.service';
 import { CreateChildDto } from './dto/create-child.dto';
@@ -33,9 +34,11 @@ export class ChildrenController {
   @Get()
   findAll(
     @CurrentUser() user: CurrentUserData,
-    @Query('parentId', ParseIntPipe) parentId?: number,
+    @Query('parentId') parentId?: string,
   ) {
-    return this.childrenService.findAll(user.schoolId, parentId);
+    // parentId es opcional, convertir a número si existe
+    const parentIdNum = parentId ? parseInt(parentId, 10) : undefined;
+    return this.childrenService.findAll(user.schoolId, parentIdNum);
   }
 
   @Get('my-children')

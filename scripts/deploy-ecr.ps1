@@ -6,7 +6,8 @@ param(
     [string]$Tag = ""
 )
 
-$ErrorActionPreference = "Stop"
+# Suppress native command errors being treated as terminating errors
+$ErrorActionPreference = "Continue"
 
 # Configuration
 $AWS_REGION = "us-east-1"
@@ -37,7 +38,7 @@ Write-Host ""
 
 # Verify Docker is running
 Write-Host "Checking Docker..." -ForegroundColor White
-docker info > $null 2>&1
+$dockerCheck = docker info 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Docker is not running" -ForegroundColor Red
     Write-Host "Please start Docker Desktop" -ForegroundColor Yellow

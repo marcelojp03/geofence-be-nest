@@ -10,6 +10,7 @@ import { ChildrenModule } from './children/children.module';
 import { DevicesModule } from './devices/devices.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AlertsModule } from './alerts/alerts.module';
     DevicesModule,
     TrackingModule,
     AlertsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

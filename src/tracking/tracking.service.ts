@@ -1,11 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePositionDto } from './dto/create-position.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TrackingService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(TrackingService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async savePosition(createPositionDto: CreatePositionDto) {
     const { deviceUid, lat, lng, batteryLevel, ...otherData } = createPositionDto;
@@ -133,8 +139,16 @@ export class TrackingService {
         },
       });
 
-      // TODO: Aquí se puede agregar lógica para enviar notificación FCM al padre
-      // await this.sendPushNotification(child.parent, alertMessage);
+      // Enviar notificación push al padre
+      await this.sendPushToParent(
+        child.parent.id,
+        child.fullName,
+        alertType,
+        alert.id,
+        childId,
+        child.schoolId,
+        { lat, lng },
+      );
     }
 
     return {
@@ -222,5 +236,63 @@ export class TrackingService {
     `;
 
     return positions;
+  }
+
+  /**
+   * Enviar notificación push al padre cuando hay alerta de geocerca
+   */
+  private async sendPushToParent(
+    parentId: number,
+    childName: string,
+    alertType: 'EXIT_AREA' | 'ENTER_AREA',
+    alertId: number,
+    childId: number,
+    schoolId: number,
+    position: { lat: number; lng: number },
+  ): Promise<void> {
+    try {
+      // Obtener todos los dispositivos del padre con fcmToken
+      // Nota: Asumimos que el padre puede tener dispositivos registrados
+      // donde recibe notificaciones (no los del hijo)
+      const parentDevices = await this.prisma.device.findMany({
+        where: {
+          child: {
+            parentId: parentId,
+          },
+          status: 'ACTIVE',
+          fcmToken: { not: null },
+        },
+        select: {
+          fcmToken: true,
+        },
+      });
+
+      const tokens = parentDevices
+        .map((d) => d.fcmToken)
+        .filter((t): t is string => t !== null);
+
+      if (tokens.length === 0) {
+        this.logger.warn(
+          `No hay tokens FCM para el padre ${parentId} - no se envió push`,
+        );
+        return;
+      }
+
+      const result = await this.notificationsService.sendGeofenceAlert(
+        tokens,
+        childName,
+        alertType,
+        alertId,
+        childId,
+        schoolId,
+        position,
+      );
+
+      this.logger.log(
+        `📱 Push enviado para alerta ${alertType}: ${result.success} éxitos, ${result.failure} fallos`,
+      );
+    } catch (error) {
+      this.logger.error(`Error enviando push al padre ${parentId}:`, error);
+    }
   }
 }

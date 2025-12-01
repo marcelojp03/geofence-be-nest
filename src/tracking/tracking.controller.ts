@@ -25,6 +25,13 @@ export class TrackingController {
     return this.trackingService.savePosition(createPositionDto);
   }
 
+  // Alias para el frontend - devuelve todas las posiciones actuales
+  @UseGuards(AuthGuard('jwt'))
+  @Get('current')
+  getCurrentPositions(@CurrentUser() user: CurrentUserData) {
+    return this.trackingService.getAllChildrenLastPositions(user.schoolId);
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Get('child/:childId/last')
   getLastPosition(@Param('childId', ParseIntPipe) childId: number) {
