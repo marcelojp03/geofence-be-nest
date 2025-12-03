@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   ParseBoolPipe,
+  Optional,
 } from '@nestjs/common';
 import { AlertsService } from './alerts.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -22,19 +23,22 @@ export class AlertsController {
   @Get()
   findAll(
     @CurrentUser() user: CurrentUserData,
-    @Query('childId', ParseIntPipe) childId?: number,
-    @Query('isRead', ParseBoolPipe) isRead?: boolean,
+    @Query('childId') childId?: string,
+    @Query('isRead') isRead?: string,
     @Query('type') type?: AlertType,
   ) {
-    return this.alertsService.findAll(user.schoolId, childId, isRead, type);
+    const parsedChildId = childId ? parseInt(childId, 10) : undefined;
+    const parsedIsRead = isRead !== undefined ? isRead === 'true' : undefined;
+    return this.alertsService.findAll(user.schoolId, parsedChildId, parsedIsRead, type);
   }
 
   @Get('my-alerts')
   findMyAlerts(
     @CurrentUser() user: CurrentUserData,
-    @Query('isRead', ParseBoolPipe) isRead?: boolean,
+    @Query('isRead') isRead?: string,
   ) {
-    return this.alertsService.findByParent(user.userId, user.schoolId, isRead);
+    const parsedIsRead = isRead !== undefined ? isRead === 'true' : undefined;
+    return this.alertsService.findByParent(user.userId, user.schoolId, parsedIsRead);
   }
 
   @Get('unread-count')

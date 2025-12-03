@@ -4,11 +4,21 @@
 [![Prisma](https://img.shields.io/badge/Prisma-6.16.1-blue.svg)](https://www.prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PostGIS-green.svg)](https://postgis.net/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-blue.svg)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE)
+[![Firebase](https://img.shields.io/badge/Firebase-FCM-orange.svg)](https://firebase.google.com/)
 
-REST API backend for real-time geofencing system with multi-tenant architecture. Tracks children locations within school perimeters using PostGIS spatial queries.
+REST API backend for real-time geofencing system with multi-tenant architecture. Tracks children locations within school perimeters using PostGIS spatial queries and sends push notifications via Firebase Cloud Messaging.
 
-> **Project Documentation:** For detailed information about architecture, API endpoints, and system design, see [ESTADO_ACTUAL.md](ESTADO_ACTUAL.md)
+---
+
+## Features
+
+- **Multi-tenant architecture** by schoolId
+- **Role-based access control** (SCHOOL_ADMIN, PARENT)
+- **PostGIS spatial queries** for geofencing (ST_Within, ST_MakePoint)
+- **Automatic alert generation** on area entry/exit
+- **Push notifications** via Firebase Cloud Messaging (FCM)
+- **JWT authentication** with unique token per login
+- **Standardized API responses** with consistent format
 
 ---
 
@@ -16,6 +26,7 @@ REST API backend for real-time geofencing system with multi-tenant architecture.
 
 - Node.js >= 18.x
 - PostgreSQL 14+ with PostGIS extension
+- Firebase project (for push notifications)
 - npm or yarn
 
 ---
@@ -44,41 +55,37 @@ Create a `.env` file in the root directory:
 DATABASE_URL="postgresql://username:password@host:5432/database?schema=sig"
 
 # JWT
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-JWT_EXPIRES_IN="24h"
+JWT_SECRET="your-super-secret-jwt-key"
+JWT_EXPIRATION="7d"
 
 # Server
 PORT=3000
 NODE_ENV=development
+
+# Firebase Admin SDK (for push notifications)
+FIREBASE_PROJECT_ID="your-firebase-project-id"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxx@your-project.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
 ### 4. Setup database
 
-Run Prisma migrations to create tables and indexes:
-
 ```bash
 npx prisma migrate deploy
-```
-
-Generate Prisma Client:
-
-```bash
 npx prisma generate
 ```
 
-**Note:** PostGIS geometry columns (`schools.geom`, `child_positions.geom`) must be created manually. See `database/add_postgis_manual.sql` for the SQL script.
+**Note:** PostGIS geometry columns must be created manually. See migration files for SQL scripts.
 
 ---
 
 ## Running the Application
 
-### Development mode (with hot-reload)
+### Development mode
 
 ```bash
 npm run start:dev
 ```
-
-Server will start on `http://localhost:3000`
 
 ### Production mode
 
@@ -87,16 +94,27 @@ npm run build
 npm run start:prod
 ```
 
+### Deploy to AWS ECR
+
+```bash
+npm run deploy
+```
+
+Server runs on `http://localhost:3000/api`
+
 ---
 
-## API Testing
+## API Modules
 
-Import `postman_collection.json` into Postman to test all 53 endpoints.
-
-The collection includes:
-- Environment variables auto-configuration
-- JWT token auto-capture on login
-- Complete flow test (school → user → child → device → tracking)
+| Module | Endpoints | Description |
+|--------|-----------|-------------|
+| **Auth** | `/auth/login`, `/auth/register`, `/auth/me` | JWT authentication |
+| **Schools** | `/schools` | School management (CRUD) |
+| **Users** | `/users` | Users management (admin & parents) |
+| **Children** | `/children`, `/children/my-children` | Children management |
+| **Devices** | `/devices`, `/devices/link` | Mobile device registration |
+| **Tracking** | `/tracking/positions` (public) | GPS position tracking |
+| **Alerts** | `/alerts`, `/alerts/my-alerts` | Geofence alerts |
 
 ---
 
@@ -104,51 +122,48 @@ The collection includes:
 
 ```
 src/
-├── auth/           # JWT authentication & authorization
-├── schools/        # School management (CRUD)
-├── users/          # User management (admins & parents)
-├── children/       # Child registration
-├── devices/        # Mobile device management
-├── tracking/       # GPS position tracking (public endpoint)
-├── alerts/         # Geofence alerts (enter/exit area)
-└── prisma/         # Database service & schema
+├── auth/           # JWT authentication
+├── schools/        # School management
+├── users/          # User management
+├── children/       # Children registration
+├── devices/        # Device management
+├── tracking/       # GPS tracking + geofence detection
+├── alerts/         # Alert management
+├── notifications/  # Firebase Cloud Messaging
+├── firebase/       # Firebase Admin SDK config
+├── prisma/         # Database service
+└── common/
+    ├── decorators/     # @Public, @CurrentUser
+    ├── filters/        # HttpExceptionFilter
+    ├── interceptors/   # ResponseInterceptor
+    └── responses/      # ApiResponse helper
 ```
 
 ---
 
-## Key Features
-
-- **Multi-tenant architecture** by schoolId
-- **Role-based access control** (SCHOOL_ADMIN, PARENT)
-- **PostGIS spatial queries** for geofencing (ST_Within, ST_MakePoint)
-- **Public tracking endpoint** for mobile apps (no authentication)
-- **Automatic alert generation** on area entry/exit
-- **JWT authentication** with Passport strategies
-
----
-
-## Additional Documentation
+## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [docs/ESTADO_ACTUAL.md](docs/ESTADO_ACTUAL.md) | Complete backend status, models, endpoints, architecture |
-| [docs/ENDPOINTS_COMPLETOS.md](docs/ENDPOINTS_COMPLETOS.md) | Full API reference with request/response examples |
-| [docs/ARQUITECTURA_CLIENTES.md](docs/ARQUITECTURA_CLIENTES.md) | Client architecture (Flutter apps, React panel, QGIS) |
-| [docs/SMOKE_TESTS.md](docs/SMOKE_TESTS.md) | PowerShell scripts for API testing |
+| [docs/API_WEB_ADMIN.md](docs/API_WEB_ADMIN.md) | API reference for React admin panel |
+| [docs/API_MOBILE_FLUTTER.md](docs/API_MOBILE_FLUTTER.md) | API reference for Flutter mobile app |
+| [docs/API_EXAMPLES.md](docs/API_EXAMPLES.md) | API usage examples with curl/HTTP |
+| [postman_collection.json](postman_collection.json) | Postman collection for testing |
 
 ---
 
 ## Tech Stack
 
-- **Framework:** NestJS 11.0.1
-- **ORM:** Prisma 6.16.1
+- **Framework:** NestJS 11
+- **ORM:** Prisma 6
 - **Database:** PostgreSQL + PostGIS
 - **Authentication:** JWT with Passport
-- **Validation:** class-validator, class-transformer
-- **Language:** TypeScript 5.7.3
+- **Push Notifications:** Firebase Admin SDK
+- **Validation:** class-validator
+- **Language:** TypeScript 5
 
 ---
 
 ## License
 
-This project is licensed under the MIT License.
+MIT
