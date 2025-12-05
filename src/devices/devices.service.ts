@@ -3,10 +3,12 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
+import { PairDeviceDto } from './dto/pair-device.dto';
 
 @Injectable()
 export class DevicesService {
@@ -149,5 +151,107 @@ export class DevicesService {
         },
       },
     });
+  }
+
+  /**
+   * Pairing de dispositivo desde modo hijo (child mode)
+   * Endpoint público - no requiere autenticación
+   * Registra el dispositivo y lo vincula al niño en un solo paso
+   */
+  async pairDevice(pairDeviceDto: PairDeviceDto) {
+    const { schoolId, childId, deviceUid, ...deviceInfo } = pairDeviceDto;
+
+    // Verificar que el colegio exista
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+    });
+
+    if (!school) {
+      throw new BadRequestException('Colegio no encontrado');
+    }
+
+    // Verificar que el niño exista y pertenezca al colegio
+    const child = await this.prisma.child.findUnique({
+      where: { id: childId },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (!child) {
+      throw new NotFoundException('Hijo no encontrado');
+    }
+
+    if (child.schoolId !== schoolId) {
+      throw new ForbiddenException('El hijo no pertenece a este colegio');
+    }
+
+    // Buscar si el dispositivo ya existe
+    const existingDevice = await this.prisma.device.findUnique({
+      where: { deviceUid },
+    });
+
+    let device;
+
+    if (existingDevice) {
+      // Si el dispositivo existe, actualizarlo y vincularlo al niño
+      device = await this.prisma.device.update({
+        where: { id: existingDevice.id },
+        data: {
+          ...deviceInfo,
+          schoolId,
+          childId,
+          lastSeen: new Date(),
+        },
+        include: {
+          child: {
+            select: {
+              id: true,
+              fullName: true,
+              grade: true,
+            },
+          },
+        },
+      });
+    } else {
+      // Si no existe, crear el dispositivo y vincularlo
+      device = await this.prisma.device.create({
+        data: {
+          deviceUid,
+          ...deviceInfo,
+          schoolId,
+          childId,
+          lastSeen: new Date(),
+        },
+        include: {
+          child: {
+            select: {
+              id: true,
+              fullName: true,
+              grade: true,
+            },
+          },
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: existingDevice 
+        ? 'Dispositivo actualizado y vinculado correctamente' 
+        : 'Dispositivo registrado y vinculado correctamente',
+      device,
+      child: {
+        id: child.id,
+        fullName: child.fullName,
+        grade: child.grade,
+        parent: child.parent,
+      },
+    };
   }
 }

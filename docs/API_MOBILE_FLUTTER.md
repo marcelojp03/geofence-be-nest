@@ -3,7 +3,7 @@
 **Base URL:** `http://localhost:3000/api` (desarrollo)
 **Producción:** `https://tu-app-runner-url.us-east-1.awsapprunner.com/api`
 
-**Versión:** 1.0.1 | **Última actualización:** 27 Nov 2025
+**Versión:** 1.0.2 | **Última actualización:** 28 Nov 2025
 
 ---
 
@@ -511,47 +511,247 @@ class DeviceService {
 
 ---
 
-## 2️⃣ Registrar Dispositivo (Primera vez)
+## 2️⃣ Pairing del Dispositivo (QR Code Flow)
 
-> **Nota:** Este endpoint requiere autenticación. El padre debe registrar el dispositivo.
+### `POST /devices/pair` 🔓 PÚBLICO
+**⚡ ENDPOINT PÚBLICO - NO REQUIERE AUTENTICACIÓN**
 
-### `POST /devices`
-Registrar dispositivo del hijo.
+Registra el dispositivo y lo vincula al niño en un solo paso.
+Este endpoint es llamado desde el **modo hijo** después de escanear el código QR generado por el padre.
 
-```dart
-// El padre registra el dispositivo desde su sesión
-Future<Device> registerDevice(Map<String, dynamic> deviceData) async {
-  final response = await _api.dio.post('/devices', data: deviceData);
-  
-  if (response.data['success']) {
-    return Device.fromJson(response.data['data']);
-  }
-  
-  throw ApiException(response.data['message']);
+**El código QR del padre contiene:**
+```json
+{
+  "childId": 1,
+  "schoolId": 1
 }
 ```
 
----
-
-### `POST /devices/link`
-Vincular dispositivo a un hijo.
-
 ```dart
-Future<void> linkDeviceToChild(String deviceUid, int childId) async {
-  final response = await _api.dio.post('/devices/link', data: {
-    'deviceUid': deviceUid,
-    'childId': childId,
+// lib/features/child_mode/data/pairing_repository.dart
+import 'package:dio/dio.dart';
+
+class PairingRepository {
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'http://tu-backend.com/api',
+    contentType: 'application/json',
+  ));
+  
+  /// Realiza el pairing del dispositivo con el hijo
+  /// [qrData] - Datos extraídos del QR (childId, schoolId)
+  /// [deviceData] - Información del dispositivo (deviceUid, model, etc.)
+  Future<PairingResponse> pairDevice({
+    required Map<String, dynamic> qrData,
+    required Map<String, dynamic> deviceData,
+  }) async {
+    final response = await _dio.post('/devices/pair', data: {
+      'schoolId': qrData['schoolId'],
+      'childId': qrData['childId'],
+      'deviceUid': deviceData['deviceUid'],
+      'name': deviceData['name'],
+      'model': deviceData['model'],
+      'manufacturer': deviceData['manufacturer'],
+      'osVersion': deviceData['osVersion'],
+      'platform': deviceData['platform'],
+      'fcmToken': deviceData['fcmToken'],
+    });
+    
+    return PairingResponse.fromJson(response.data);
+  }
+}
+
+// Modelo de respuesta
+class PairingResponse {
+  final bool success;
+  final String message;
+  final DeviceInfo? device;
+  final ChildInfo? child;
+  
+  PairingResponse({
+    required this.success,
+    required this.message,
+    this.device,
+    this.child,
   });
   
-  if (!response.data['success']) {
-    throw ApiException(response.data['message']);
+  factory PairingResponse.fromJson(Map<String, dynamic> json) {
+    return PairingResponse(
+      success: json['success'],
+      message: json['message'],
+      device: json['device'] != null ? DeviceInfo.fromJson(json['device']) : null,
+      child: json['child'] != null ? ChildInfo.fromJson(json['child']) : null,
+    );
+  }
+}
+```
+
+**Request Body:**
+```json
+{
+  "schoolId": 1,
+  "childId": 1,
+  "deviceUid": "abc123def456",
+  "name": "Samsung Galaxy S21",
+  "model": "SM-G991B",
+  "manufacturer": "Samsung",
+  "osVersion": "Android 13",
+  "platform": "android",
+  "fcmToken": "cXyz..."
+}
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "message": "Dispositivo registrado y vinculado correctamente",
+  "device": {
+    "id": 5,
+    "deviceUid": "abc123def456",
+    "name": "Samsung Galaxy S21",
+    "model": "SM-G991B",
+    "manufacturer": "Samsung",
+    "osVersion": "Android 13",
+    "platform": "android",
+    "fcmToken": "cXyz...",
+    "childId": 1,
+    "schoolId": 1,
+    "lastSeen": "2025-11-28T10:30:00.000Z",
+    "child": {
+      "id": 1,
+      "fullName": "Pedrito García",
+      "grade": "3ro Primaria"
+    }
+  },
+  "child": {
+    "id": 1,
+    "fullName": "Pedrito García",
+    "grade": "3ro Primaria",
+    "parent": {
+      "id": 2,
+      "fullName": "María García"
+    }
+  }
+}
+```
+
+**Response (Error - Hijo no encontrado):**
+```json
+{
+  "success": false,
+  "message": "Hijo no encontrado",
+  "code": "NOT_FOUND"
+}
+```
+
+---
+
+## 3️⃣ Flujo Completo de Pairing (QR)
+
+```dart
+// lib/features/child_mode/presentation/qr_scanner_screen.dart
+import 'package:mobile_scanner/mobile_scanner.dart';
+
+class QrScannerScreen extends StatefulWidget {
+  @override
+  _QrScannerScreenState createState() => _QrScannerScreenState();
+}
+
+class _QrScannerScreenState extends State<QrScannerScreen> {
+  final PairingRepository _pairingRepo = PairingRepository();
+  final DeviceService _deviceService = DeviceService();
+  bool _isProcessing = false;
+  
+  Future<void> _onQrDetected(BarcodeCapture capture) async {
+    if (_isProcessing) return;
+    
+    final String? code = capture.barcodes.first.rawValue;
+    if (code == null) return;
+    
+    setState(() => _isProcessing = true);
+    
+    try {
+      // 1. Parsear datos del QR
+      final qrData = jsonDecode(code);
+      
+      // Validar que tenga los campos requeridos
+      if (qrData['childId'] == null || qrData['schoolId'] == null) {
+        throw Exception('QR inválido');
+      }
+      
+      // 2. Obtener información del dispositivo
+      final deviceData = await _deviceService.getDeviceData();
+      
+      // 3. Realizar pairing
+      final response = await _pairingRepo.pairDevice(
+        qrData: qrData,
+        deviceData: deviceData,
+      );
+      
+      if (response.success) {
+        // Guardar configuración local
+        await _saveChildModeConfig(
+          childId: response.child!.id,
+          childName: response.child!.fullName,
+          deviceUid: deviceData['deviceUid'],
+        );
+        
+        // Iniciar servicio de tracking
+        await LocationTrackingService.start(deviceData['deviceUid']);
+        
+        // Navegar a pantalla de modo hijo activo
+        Navigator.pushReplacementNamed(context, '/child-mode-active');
+      } else {
+        _showError(response.message);
+      }
+      
+    } catch (e) {
+      _showError('Error al procesar QR: $e');
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+  
+  Future<void> _saveChildModeConfig({
+    required int childId,
+    required String childName,
+    required String deviceUid,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isChildMode', true);
+    await prefs.setInt('childId', childId);
+    await prefs.setString('childName', childName);
+    await prefs.setString('deviceUid', deviceUid);
+  }
+  
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Escanear QR del Padre')),
+      body: Stack(
+        children: [
+          MobileScanner(onDetect: _onQrDetected),
+          if (_isProcessing)
+            Container(
+              color: Colors.black54,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
   }
 }
 ```
 
 ---
 
-## 3️⃣ Envío de Posiciones GPS (Background Service)
+## 4️⃣ Envío de Posiciones GPS (Background Service)
 
 ### `POST /tracking/positions` 🔓 PÚBLICO
 **⚡ ENDPOINT CRÍTICO - NO REQUIERE AUTENTICACIÓN**

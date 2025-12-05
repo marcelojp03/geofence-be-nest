@@ -66,7 +66,7 @@ export class TrackingService {
           ${otherData.heading || null}::double precision,
           ${otherData.altitude || null}::double precision,
           ${batteryLevel || null}::int,
-          ST_SetSRID(ST_MakePoint(${lng}::double precision, ${lat}::double precision), 4326),
+          public.ST_SetSRID(public.ST_MakePoint(${lng}::double precision, ${lat}::double precision), 4326),
           NOW()
         )
       RETURNING id, school_id, child_id, lat, lng, battery_level, created_at
@@ -80,7 +80,7 @@ export class TrackingService {
     >`
       SELECT 
         COALESCE(
-          ST_Within(
+          public.ST_Within(
             (SELECT geom FROM "sig"."child_positions" WHERE id = ${savedPosition.id}),
             (SELECT geom FROM "sig"."schools" WHERE id = ${child.schoolId})
           ),
