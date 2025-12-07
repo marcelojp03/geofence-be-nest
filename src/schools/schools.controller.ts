@@ -47,4 +47,24 @@ export class SchoolsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.schoolsService.remove(id);
   }
+
+  /**
+   * Obtener el geofence de un colegio en formato GeoJSON
+   * GET /schools/:id/geofence
+   */
+  @Public()
+  @Get(':id/geofence')
+  getGeofence(@Param('id', ParseIntPipe) id: number) {
+    return this.schoolsService.getGeofence(id);
+  }
+
+  /**
+   * Obtener todos los colegios con sus geofences
+   * GET /schools/geofences
+   */
+  @Public()
+  @Get('with-geofences')
+  findAllWithGeofence() {
+    return this.schoolsService.findAllWithGeofence();
+  }
 }

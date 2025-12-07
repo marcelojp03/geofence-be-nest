@@ -182,4 +182,105 @@ export class AlertsService {
       },
     });
   }
+
+  /**
+   * Obtener resumen de alertas de un hijo por período
+   */
+  async getChildAlertsSummary(
+    childId: number,
+    schoolId: number,
+    from?: Date,
+    to?: Date,
+  ) {
+    // Verificar que el hijo existe y pertenece al colegio
+    const child = await this.prisma.child.findUnique({
+      where: { id: childId },
+      select: {
+        id: true,
+        fullName: true,
+        grade: true,
+        schoolId: true,
+      },
+    });
+
+    if (!child || child.schoolId !== schoolId) {
+      throw new NotFoundException('Hijo no encontrado');
+    }
+
+    // Fechas por defecto: últimos 7 días
+    const endDate = to || new Date();
+    const startDate = from || new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Contar alertas por tipo
+    const alertCounts = await this.prisma.alert.groupBy({
+      by: ['type'],
+      where: {
+        childId,
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _count: true,
+    });
+
+    // Obtener alertas detalladas
+    const alerts = await this.prisma.alert.findMany({
+      where: {
+        childId,
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        isRead: true,
+        createdAt: true,
+        position: {
+          select: {
+            lat: true,
+            lng: true,
+          },
+        },
+      },
+    });
+
+    // Agrupar alertas por día
+    const alertsByDay: Record<string, { date: string; exit: number; entry: number }> = {};
+    alerts.forEach(alert => {
+      const dateKey = alert.createdAt.toISOString().substring(0, 10);
+      if (!alertsByDay[dateKey]) {
+        alertsByDay[dateKey] = { date: dateKey, exit: 0, entry: 0 };
+      }
+      if (alert.type === 'EXIT_AREA') {
+        alertsByDay[dateKey].exit++;
+      } else {
+        alertsByDay[dateKey].entry++;
+      }
+    });
+
+    return {
+      child: {
+        id: child.id,
+        fullName: child.fullName,
+        grade: child.grade,
+      },
+      period: {
+        from: startDate.toISOString(),
+        to: endDate.toISOString(),
+      },
+      summary: {
+        total: alerts.length,
+        exitAlerts: alertCounts.find(a => a.type === 'EXIT_AREA')?._count || 0,
+        entryAlerts: alertCounts.find(a => a.type === 'ENTER_AREA')?._count || 0,
+        unread: alerts.filter(a => !a.isRead).length,
+      },
+      byDay: Object.values(alertsByDay).sort((a, b) => b.date.localeCompare(a.date)),
+      alerts,
+    };
+  }
 }

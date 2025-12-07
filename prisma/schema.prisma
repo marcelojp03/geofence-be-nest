@@ -85,12 +85,23 @@ model Child {
 }
 
 // ========================================
-// Device (Dispositivo del hijo)
+// DeviceOwnerType - Tipo de propietario del dispositivo
+// ========================================
+enum DeviceOwnerType {
+  CHILD   // Dispositivo del hijo (envía posiciones GPS)
+  PARENT  // Dispositivo del padre (solo recibe notificaciones)
+}
+
+// ========================================
+// Device (Dispositivo del hijo o padre)
 // ========================================
 model Device {
   id        Int       @id @default(autoincrement())
   schoolId  Int       @map("school_id")
   childId   Int?      @map("child_id")
+
+  // Tipo de propietario: CHILD (envía posiciones) o PARENT (solo recibe notificaciones)
+  ownerType DeviceOwnerType @default(CHILD) @map("owner_type")
 
   // Identificador único del dispositivo (Android ID, IDFV, UUID)
   deviceUid String    @unique @map("device_uid") @db.VarChar(255)

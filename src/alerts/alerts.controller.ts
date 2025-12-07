@@ -66,4 +66,25 @@ export class AlertsController {
   markAllAsRead(@CurrentUser() user: CurrentUserData) {
     return this.alertsService.markAllAsRead(user.schoolId, user.userId);
   }
+
+  /**
+   * Obtener resumen de alertas de un hijo por período
+   * GET /alerts/child/:childId/summary?from=2025-12-01&to=2025-12-06
+   */
+  @Get('child/:childId/summary')
+  getChildAlertsSummary(
+    @Param('childId', ParseIntPipe) childId: number,
+    @CurrentUser() user: CurrentUserData,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+    return this.alertsService.getChildAlertsSummary(
+      childId,
+      user.schoolId,
+      fromDate,
+      toDate,
+    );
+  }
 }
