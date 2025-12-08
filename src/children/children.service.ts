@@ -55,6 +55,9 @@ export class ChildrenService {
           },
         },
         devices: {
+          where: {
+            ownerType: 'CHILD', // Solo dispositivos del hijo
+          },
           select: {
             id: true,
             deviceUid: true,
@@ -92,7 +95,11 @@ export class ChildrenService {
             name: true,
           },
         },
-        devices: true,
+        devices: {
+          where: {
+            ownerType: 'CHILD', // Solo dispositivos del hijo
+          },
+        },
         positions: {
           take: 10,
           orderBy: { createdAt: 'desc' },
@@ -142,13 +149,17 @@ export class ChildrenService {
   }
 
   async findByParent(parentId: number, schoolId: number) {
-    return this.prisma.child.findMany({
+    const children = await this.prisma.child.findMany({
       where: {
         parentId,
         schoolId,
       },
       include: {
         devices: {
+          where: {
+            ownerType: 'CHILD', // Solo dispositivos del hijo, no del padre
+            status: 'ACTIVE',
+          },
           select: {
             id: true,
             deviceUid: true,
@@ -156,6 +167,7 @@ export class ChildrenService {
             status: true,
             lastSeen: true,
           },
+          take: 1, // Solo el dispositivo activo
         },
         _count: {
           select: {
@@ -165,6 +177,43 @@ export class ChildrenService {
           },
         },
       },
+    });
+
+    // Calcular deviceStatus para cada hijo
+    const ONLINE_THRESHOLD_MINUTES = 5;
+    const RECENT_THRESHOLD_MINUTES = 30;
+
+    return children.map((child) => {
+      const device = child.devices[0]; // Dispositivo CHILD activo
+      let deviceStatus: 'no_device' | 'online' | 'recent' | 'no_signal';
+      let minutesSinceLastSeen: number | null = null;
+
+      if (!device) {
+        deviceStatus = 'no_device';
+      } else if (!device.lastSeen) {
+        deviceStatus = 'no_signal';
+      } else {
+        const now = new Date();
+        minutesSinceLastSeen = Math.round(
+          (now.getTime() - new Date(device.lastSeen).getTime()) / 60000,
+        );
+
+        if (minutesSinceLastSeen <= ONLINE_THRESHOLD_MINUTES) {
+          deviceStatus = 'online';
+        } else if (minutesSinceLastSeen <= RECENT_THRESHOLD_MINUTES) {
+          deviceStatus = 'recent';
+        } else {
+          deviceStatus = 'no_signal';
+        }
+      }
+
+      return {
+        ...child,
+        device: device || null,
+        devices: undefined, // Remover el array, usar 'device' singular
+        deviceStatus,
+        minutesSinceLastSeen,
+      };
     });
   }
 }

@@ -210,16 +210,18 @@ export class TrackingService {
   }
 
   async getAllChildrenLastPositions(schoolId: number) {
-    // Umbral para considerar "sin señal" (30 minutos sin actualizar)
-    const STALE_THRESHOLD_MINUTES = 30;
+    // Umbrales de tiempo
+    const ONLINE_THRESHOLD_MINUTES = 5;
+    const RECENT_THRESHOLD_MINUTES = 30;
 
     // Obtener la última posición de cada niño del colegio
-    // Incluye verificación de si está dentro del geofence
+    // Incluye verificación de si está dentro del geofence y estado del dispositivo
     const positions = await this.prisma.$queryRaw<
       Array<{
         child_id: number;
         full_name: string;
         grade: string | null;
+        parent_name: string | null;
         lat: number | null;
         lng: number | null;
         accuracy: number | null;
@@ -227,12 +229,16 @@ export class TrackingService {
         created_at: Date | null;
         is_inside_geofence: boolean | null;
         minutes_since_update: number | null;
+        has_device: boolean;
+        device_last_seen: Date | null;
+        minutes_since_device_seen: number | null;
       }>
     >`
       SELECT DISTINCT ON (c.id)
         c.id as child_id,
         c.full_name,
         c.grade,
+        u.full_name as parent_name,
         cp.lat,
         cp.lng,
         cp.accuracy,
@@ -251,8 +257,30 @@ export class TrackingService {
         CASE 
           WHEN cp.created_at IS NULL THEN NULL
           ELSE EXTRACT(EPOCH FROM (NOW() - cp.created_at)) / 60
-        END as minutes_since_update
+        END as minutes_since_update,
+        EXISTS(
+          SELECT 1 FROM "sig"."devices" d 
+          WHERE d.child_id = c.id 
+            AND d.owner_type = 'CHILD' 
+            AND d.status = 'ACTIVE'
+        ) as has_device,
+        (
+          SELECT d.last_seen FROM "sig"."devices" d 
+          WHERE d.child_id = c.id 
+            AND d.owner_type = 'CHILD' 
+            AND d.status = 'ACTIVE'
+          LIMIT 1
+        ) as device_last_seen,
+        (
+          SELECT EXTRACT(EPOCH FROM (NOW() - d.last_seen)) / 60 
+          FROM "sig"."devices" d 
+          WHERE d.child_id = c.id 
+            AND d.owner_type = 'CHILD' 
+            AND d.status = 'ACTIVE'
+          LIMIT 1
+        ) as minutes_since_device_seen
       FROM "sig"."children" c
+      LEFT JOIN "sig"."users" u ON u.id = c.parent_id
       LEFT JOIN "sig"."child_positions" cp ON cp.child_id = c.id
       WHERE c.school_id = ${schoolId}
         AND c.status = 'ACTIVE'
@@ -261,34 +289,56 @@ export class TrackingService {
 
     // Transformar y agregar status
     return positions.map((p) => {
-      // Determinar si tiene señal activa
       const hasPosition = p.lat !== null && p.lng !== null;
-      const isStale = p.minutes_since_update !== null && p.minutes_since_update > STALE_THRESHOLD_MINUTES;
-      const hasSignal = hasPosition && !isStale;
-
-      // Determinar status: 'inside' | 'outside' | 'no_signal'
-      let status: 'inside' | 'outside' | 'no_signal';
-      if (!hasSignal) {
-        status = 'no_signal';
-      } else if (p.is_inside_geofence === true) {
-        status = 'inside';
+      
+      // Determinar deviceStatus basado en el dispositivo CHILD
+      let deviceStatus: 'no_device' | 'online' | 'recent' | 'no_signal';
+      
+      if (!p.has_device) {
+        deviceStatus = 'no_device';
+      } else if (!p.device_last_seen) {
+        deviceStatus = 'no_signal';
+      } else if (p.minutes_since_device_seen !== null) {
+        if (p.minutes_since_device_seen <= ONLINE_THRESHOLD_MINUTES) {
+          deviceStatus = 'online';
+        } else if (p.minutes_since_device_seen <= RECENT_THRESHOLD_MINUTES) {
+          deviceStatus = 'recent';
+        } else {
+          deviceStatus = 'no_signal';
+        }
       } else {
-        status = 'outside';
+        deviceStatus = 'no_signal';
+      }
+
+      // Status de ubicación (solo tiene sentido si hay señal)
+      let locationStatus: 'inside' | 'outside' | 'unknown';
+      if (deviceStatus === 'online' || deviceStatus === 'recent') {
+        if (hasPosition && p.is_inside_geofence === true) {
+          locationStatus = 'inside';
+        } else if (hasPosition && p.is_inside_geofence === false) {
+          locationStatus = 'outside';
+        } else {
+          locationStatus = 'unknown';
+        }
+      } else {
+        locationStatus = 'unknown';
       }
 
       return {
         childId: p.child_id,
         fullName: p.full_name,
         grade: p.grade,
+        parentName: p.parent_name,
         lat: p.lat,
         lng: p.lng,
         accuracy: p.accuracy,
         batteryLevel: p.battery_level,
-        createdAt: p.created_at,
-        isInsideGeofence: hasSignal ? p.is_inside_geofence : null,
-        hasSignal,
-        status,
+        lastPositionAt: p.created_at,
+        isInsideGeofence: hasPosition ? p.is_inside_geofence : null,
+        deviceStatus,
+        locationStatus,
         minutesSinceUpdate: p.minutes_since_update ? Math.round(p.minutes_since_update) : null,
+        minutesSinceDeviceSeen: p.minutes_since_device_seen ? Math.round(p.minutes_since_device_seen) : null,
       };
     });
   }
@@ -298,8 +348,9 @@ export class TrackingService {
    * Similar a getAllChildrenLastPositions pero filtrado por parentId
    */
   async getMyChildrenLastPositions(parentId: number, schoolId: number) {
-    // Umbral para considerar "sin señal" (30 minutos sin actualizar)
-    const STALE_THRESHOLD_MINUTES = 30;
+    // Umbrales de tiempo
+    const ONLINE_THRESHOLD_MINUTES = 5;
+    const RECENT_THRESHOLD_MINUTES = 30;
 
     const positions = await this.prisma.$queryRaw<
       Array<{
@@ -313,6 +364,9 @@ export class TrackingService {
         created_at: Date | null;
         is_inside_geofence: boolean | null;
         minutes_since_update: number | null;
+        has_device: boolean;
+        device_last_seen: Date | null;
+        minutes_since_device_seen: number | null;
       }>
     >`
       SELECT DISTINCT ON (c.id)
@@ -337,7 +391,28 @@ export class TrackingService {
         CASE 
           WHEN cp.created_at IS NULL THEN NULL
           ELSE EXTRACT(EPOCH FROM (NOW() - cp.created_at)) / 60
-        END as minutes_since_update
+        END as minutes_since_update,
+        EXISTS(
+          SELECT 1 FROM "sig"."devices" d 
+          WHERE d.child_id = c.id 
+            AND d.owner_type = 'CHILD' 
+            AND d.status = 'ACTIVE'
+        ) as has_device,
+        (
+          SELECT d.last_seen FROM "sig"."devices" d 
+          WHERE d.child_id = c.id 
+            AND d.owner_type = 'CHILD' 
+            AND d.status = 'ACTIVE'
+          LIMIT 1
+        ) as device_last_seen,
+        (
+          SELECT EXTRACT(EPOCH FROM (NOW() - d.last_seen)) / 60 
+          FROM "sig"."devices" d 
+          WHERE d.child_id = c.id 
+            AND d.owner_type = 'CHILD' 
+            AND d.status = 'ACTIVE'
+          LIMIT 1
+        ) as minutes_since_device_seen
       FROM "sig"."children" c
       LEFT JOIN "sig"."child_positions" cp ON cp.child_id = c.id
       WHERE c.school_id = ${schoolId}
@@ -349,16 +424,38 @@ export class TrackingService {
     // Transformar y agregar status
     return positions.map((p) => {
       const hasPosition = p.lat !== null && p.lng !== null;
-      const isStale = p.minutes_since_update !== null && p.minutes_since_update > STALE_THRESHOLD_MINUTES;
-      const hasSignal = hasPosition && !isStale;
-
-      let status: 'inside' | 'outside' | 'no_signal';
-      if (!hasSignal) {
-        status = 'no_signal';
-      } else if (p.is_inside_geofence === true) {
-        status = 'inside';
+      
+      // Determinar deviceStatus basado en el dispositivo CHILD
+      let deviceStatus: 'no_device' | 'online' | 'recent' | 'no_signal';
+      
+      if (!p.has_device) {
+        deviceStatus = 'no_device';
+      } else if (!p.device_last_seen) {
+        deviceStatus = 'no_signal';
+      } else if (p.minutes_since_device_seen !== null) {
+        if (p.minutes_since_device_seen <= ONLINE_THRESHOLD_MINUTES) {
+          deviceStatus = 'online';
+        } else if (p.minutes_since_device_seen <= RECENT_THRESHOLD_MINUTES) {
+          deviceStatus = 'recent';
+        } else {
+          deviceStatus = 'no_signal';
+        }
       } else {
-        status = 'outside';
+        deviceStatus = 'no_signal';
+      }
+
+      // Status de ubicación (solo tiene sentido si hay señal)
+      let locationStatus: 'inside' | 'outside' | 'unknown';
+      if (deviceStatus === 'online' || deviceStatus === 'recent') {
+        if (hasPosition && p.is_inside_geofence === true) {
+          locationStatus = 'inside';
+        } else if (hasPosition && p.is_inside_geofence === false) {
+          locationStatus = 'outside';
+        } else {
+          locationStatus = 'unknown';
+        }
+      } else {
+        locationStatus = 'unknown';
       }
 
       return {
@@ -369,11 +466,12 @@ export class TrackingService {
         lng: p.lng,
         accuracy: p.accuracy,
         batteryLevel: p.battery_level,
-        createdAt: p.created_at,
-        isInsideGeofence: hasSignal ? p.is_inside_geofence : null,
-        hasSignal,
-        status,
+        lastPositionAt: p.created_at,
+        isInsideGeofence: hasPosition ? p.is_inside_geofence : null,
+        deviceStatus,
+        locationStatus,
         minutesSinceUpdate: p.minutes_since_update ? Math.round(p.minutes_since_update) : null,
+        minutesSinceDeviceSeen: p.minutes_since_device_seen ? Math.round(p.minutes_since_device_seen) : null,
       };
     });
   }
